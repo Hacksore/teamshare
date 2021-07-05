@@ -1,16 +1,16 @@
 import io from "socket.io-client";
 
-const STUN_CONFIG = {
-  iceServers: [
-    { 
-      "urls": "stun:stun.l.google.com:19302",
-    },
-  ]
-};
+// const STUN_CONFIG = {
+//   iceServers: [
+//     { 
+//       "urls": "stun:stun.l.google.com:19302",
+//     },
+//   ]
+// };
 
 class SocketService { 
 
-  private peerConnections = {};
+  private peerConnections: any = {};
   public ws;
 
   constructor() {
@@ -18,12 +18,14 @@ class SocketService {
       path: "/ws",
       transports: ["websocket"]
     });
-    
+
+    // this.ws.on("answer", this.answer.bind(this));
+
   }
   
-  // socket.on("answer", (id, description) => {   
-  //   peerConnections[id].setRemoteDescription(description);
-  // });
+  // answer(id: string, description: string) {   
+  //   this.peerConnections[id].setRemoteDescription(description);
+  // }
 
   // socket.on("watcher", id => {
   //   const peerConnection = new RTCPeerConnection(config);
@@ -57,10 +59,10 @@ class SocketService {
 
 }
 
-// if (socketInstance == null) {
-//   socketInstance = new SocketService();
-// }
-
 let socketInstance: SocketService = new SocketService();
+
+if (socketInstance == null) {
+  socketInstance = new SocketService();
+}
 
 export default socketInstance;

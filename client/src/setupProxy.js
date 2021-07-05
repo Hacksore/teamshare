@@ -5,7 +5,6 @@ module.exports = (app) => {
     target: 'http://localhost:8000',
     changeOrigin: true,
     ws: true, 
-    logLevel: 'debug',
   });
 
   app.use(socketProxy);
