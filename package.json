@@ -8,9 +8,12 @@
     "dev": "concurrently npm:client npm:server",
     "client": "cd client && npm start",
     "server": "cd server && npm start",
+    "install:client": "cd client && npm install",
+    "install:server": "cd server && npm install",
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
-    "build": "node_modules/.bin/concurrently npm:build:client npm:build:server"
+    "postinstall": "concurrently npm:install:client npm:install:server",
+    "build": "concurrently npm:build:client npm:build:server"
   },
   "author": "",
   "license": "ISC",
