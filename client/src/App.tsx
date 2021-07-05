@@ -1,11 +1,8 @@
 import { useRef } from "react";
 import { useEffect } from "react";
-// import io from "socket.io-client";
 
 // @ts-ignore
 import RTCMultiConnection from "@hacksore/rtcmulticonnection";
-import { useState } from "react";
-import { createRef } from "react";
 
 const App = () => {
   const videoRef = useRef(null);

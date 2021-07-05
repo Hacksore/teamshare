@@ -15,8 +15,11 @@
     "postinstall": "concurrently npm:install:client npm:install:server",
     "build": "concurrently npm:build:client npm:build:server"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Hacksore",
+  "license": "MIT",
+  "engines": {
+    "node": "14"
+  },
   "devDependencies": {
     "concurrently": "^6.2.0"
   }
