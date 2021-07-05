@@ -10,7 +10,7 @@
     "server": "cd server && npm start",
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
-    "build": "concurrently npm:build:client npm:build:server"
+    "build": "node_modules/.bin/concurrently npm:build:client npm:build:server"
   },
   "author": "",
   "license": "ISC",
