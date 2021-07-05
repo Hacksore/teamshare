@@ -4,15 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently npm:client npm:server",
+    "start": "cd server && npm start",
+    "dev": "concurrently npm:client npm:server",
     "client": "cd client && npm start",
-    "server": "cd server && npm start"
+    "server": "cd server && npm start",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "concurrently npm:build:client npm:build:server"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^6.2.0"
-  },
-  "dependencies": {
   }
 }

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "target": "es6",
+    "target": "es5",
     "strict": true,
     "sourceMap": true,
     "noImplicitAny": false,
@@ -22,6 +22,7 @@
     "."
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist/"
   ]
 }

@@ -1,196 +1,85 @@
-import { useEffect, createRef, useRef, useState } from "react";
-import Broadcasters from "./Components/Broadcasters";
-import Participants from "./Components/Participants";
-import SocketService from "./socket";
+import { useRef } from "react";
+import { useEffect } from "react";
+// import io from "socket.io-client";
 
-const STUN_CONFIG = {
-  iceServers: [
-    {
-      urls: "stun:stun.l.google.com:19302",
-    },
-  ],
-};
+// @ts-ignore
+import RTCMultiConnection from "@hacksore/rtcmulticonnection";
+import { useState } from "react";
+import { createRef } from "react";
 
 const App = () => {
-  const videoRef = useRef<any>(null);
+  const videoRef = useRef(null);
+  const connection = useRef<any>(null);
   const [broadcasters, setBroadcasters] = useState<any>([]);
-  const [participants, setParticipants] = useState<any>([]);
-  const [userId, setUserId] = useState(null);
-  const [peerConnections, setPeerConnections] = useState<any>({});
-  const [videoRefs, setVideoRefs] = useState<any>([]);
-  const socket = SocketService.ws;
 
   useEffect(() => {
-    // someone went live
-    socket.on("broadcaster", (broadcastId) => {
-      setBroadcasters([...broadcasters, broadcastId]);
-    });
+    // TODO: figure out the HMR bug here?
+    connection.current = new RTCMultiConnection();
 
-    // get current broadcasters
-    socket.on("all-users", (allUsers) => {
-      setParticipants(allUsers);
-    });
-
-    socket.on("all-broadcasters", (allBroadcasterIds) => {
-      setBroadcasters(allBroadcasterIds);
-    });
-
-    // my id
-    socket.on("my-id", (id) => {
-      setUserId(id);
-    });
-
-    socket.on("offer", (id, description) => {
-      const pc = new RTCPeerConnection(STUN_CONFIG);
-      setPeerConnections({
-        ...peerConnections,
-        [id]: {
-          id,
-          description,
-          pc,
-        },
-      });
-
-      // pc
-      //   .setRemoteDescription(description)
-      //   .then(() => pc.createAnswer())
-      //   .then((sdp) => pc.setLocalDescription(sdp))
-      //   .then(() => {
-      //     socket.emit("answer", id, pc.localDescription);
-      //   });
-
-      // // pc.ontrack = (event) => {
-      // //   video.srcObject = event.streams[0];
-      // // };
-
-      // pc.onicecandidate = (event) => {
-      //   if (event.candidate) {
-      //     socket.emit("candidate", id, event.candidate);
-      //   }
-      // };
-    });
-
-    socket.on("answer", (id: string, description: string) => {
-      console.log("answer call");
-      // peerConnections[id].setRemoteDescription(description);
-    });
-
-    socket.on("candidate", (id, candidate) => {
-      // console.log("candidate call", id);
-
-      console.log(peerConnections);
-      // peerConnections[id].addIceCandidate(new RTCIceCandidate(candidate));
-    });
-
-    socket.on("disconnectPeer", (id) => {
-      const updatedPeerConnections = { ...peerConnections };
-      delete updatedPeerConnections[id];
-      setPeerConnections(updatedPeerConnections);
-    });
-
-    // handle watchers
-    socket.on("watcher", handleWatcher);
-  }, []);
-
-  // handle dynamic refs for broacasters
-  // useEffect(() => {
-  //   // add or remove refs
-  //   setVideoRefs((elRefs: any) =>
-  //     Array(broadcasters.length)
-  //       .fill(0)
-  //       .map((_, i) => elRefs[i] || createRef())
-  //   );
-  // }, [broadcasters]);
-
-  // handle dynamic refs for broacasters
-  useEffect(() => {
-    for (const [id, val] of Object.entries<any>(peerConnections)) {
-      if (!broadcasters.includes(id) && id !== userId) {
-        continue;
-      }
-
-      // pc.ontrack = (event) => {
-      //   video.srcObject = event.streams[0];
-      // };
-
-      val.pc.onicecandidate = (event: any) => {
-        if (event.candidate) {
-          socket.emit("candidate", id, event.candidate);
-        }
-      };
-    }
-  }, [peerConnections]);
-
-  const handleWatcher = (id: string) => {
-    const pc: any = new RTCPeerConnection(STUN_CONFIG);
-
-    setPeerConnections({
-      ...peerConnections,
-      [id]: {
-        id,
-        pc,
-      },
-    });
-
-    const stream: any = videoRef?.current?.srcObject;
-    stream.getTracks().forEach((track: any) => pc.addTrack(track, stream));
-
-    pc.onicecandidate = (event: any) => {
-      if (event.candidate) {
-        socket.emit("candidate", id, event.candidate);
-      }
+    connection.current.socketURL = "/";
+    connection.current.socketOptions = {
+      path: "/ws",
+      transports: ["websocket"],
     };
 
-    pc.createOffer()
-      .then((sdp: any) => pc.setLocalDescription(sdp))
-      .then(() => {
-        socket.emit("offer", id, pc.localDescription);
-      });
-  };
+    connection.current.session = {
+      screen: true,
+    };
 
-  const startStream = async () => {
-    if (!videoRef) {
-      return;
+    // try to join
+    connection.current.onstream = handleNewStream;
+  }, []);
+
+  useEffect(() => {
+    // update the refs
+    for (const [index, value] of Object.entries(broadcasters)) {
+      // @ts-ignore
+      broadcasters[index].ref.current.srcObject = value.stream;
     }
+  }, [broadcasters]);
 
-    // @ts-ignore
-    const stream = await navigator.mediaDevices.getDisplayMedia();
-    // console.log(stream, videoRef.current);
-
-    // @ts-ignore
-    videoRef.current.srcObject = stream;
-    socket.emit("broadcaster");
-
-    return stream;
+  const handleNewStream = (event: any) => {
+    setBroadcasters([
+      ...broadcasters,
+      {
+        id: event.userid,
+        stream: event.stream,
+        ref: createRef(),
+      },
+    ]);
   };
+
+  const goLive = () => {
+    connection.current.openOrJoin(
+      "test",
+      (isRoomOpened: boolean, roomid: string, error: any) => {
+        console.log(isRoomOpened, roomid, error);
+      }
+    );
+  };
+
+  console.log(broadcasters);
 
   return (
-    <>
-      <button onClick={startStream}>GO LIVE!!!</button>
+    <div>
+      {/* Hide our video */}
+      <video
+        ref={videoRef}
+        style={{ display: "none", width: 0, height: 0 }}
+        autoPlay
+      />
 
-      <Broadcasters broadcasters={broadcasters} />
-      <Participants participants={participants} />
-      <div style={{ position: "fixed", top: 0, right: 0 }}>{userId}</div>
+      {broadcasters.map((user: any, index: number) => (
+        <video
+          style={{ width: "100%", height: "100%" }}
+          ref={broadcasters[index].ref}
+          autoPlay
+          controls
+        />
+      ))}
 
-      <video ref={videoRef} style={{ width: 200, height: 100 }} autoPlay />
-
-      {broadcasters
-        .filter((id: string) => id !== userId) // don't show your own video
-        .map((id: string, index: string) => (
-          <div key={id}>
-            <p>{id}</p>
-            <video
-              // ref={videoRefs[index].current}
-              autoPlay
-              style={{
-                width: 200,
-                height: 100,
-                background: "#000",
-              }}
-            />
-          </div>
-        ))}
-    </>
+      <button onClick={goLive}>GO LIVE</button>
+    </div>
   );
 };
 
