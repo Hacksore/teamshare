@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.0",
   "scripts": {
-    "build": "npx tsc",
+    "build": "npx -p typescript tsc",
     "start": "node dist/server",
     "dev": "nodemon server.ts"
   },
