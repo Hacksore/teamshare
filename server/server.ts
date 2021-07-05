@@ -38,9 +38,8 @@ io.sockets.on("connection", (socket) => {
     // p2p for all of the live broadcasters
     // say hey I want to watch and I am so and so
     for(const [id, value] of Object.entries(broadcasters)) {
-      console.log("Telling broadcaster about new p2p");
-
       if (id !== socket.id) {
+        console.log(`${id}: ${socket.id} want's to connect p2p`);
         socket.to(id).emit("watcher", socket.id);
       }
     }
@@ -61,15 +60,6 @@ io.sockets.on("connection", (socket) => {
     delete broadcasters[socket.id];
     delete clients[socket.id];
   });
-
-  // someone joined and wants to laod the current broadcaster
-  // this seems silly as we already know a user wants to watch from creation
-  // socket.on("watcher", () => {
-  //   // tell all the users about a new broadcast
-  //   for(const [id, value] of Object.entries(broadcasters)) {
-  //     socket.broadcast.emit("watcher", socket.id);
-  //   }    
-  // });
 
   // STUN/WebRTC relay stuff
   socket.on("offer", (id, message) => {

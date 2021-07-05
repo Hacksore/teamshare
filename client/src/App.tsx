@@ -40,17 +40,46 @@ const App = () => {
       setUserId(id);
     });
 
-    // tell server im ready for stuff
-    // socket.on("connect", () => {
-    //   socket.emit("watcher");
-    // });
+    socket.on("offer", (id, description) => {
+      const pc = new RTCPeerConnection(STUN_CONFIG);
+      setPeerConnections({
+        ...peerConnections,
+        [id]: {
+          id,
+          description,
+          pc,
+        },
+      });
+
+      // pc
+      //   .setRemoteDescription(description)
+      //   .then(() => pc.createAnswer())
+      //   .then((sdp) => pc.setLocalDescription(sdp))
+      //   .then(() => {
+      //     socket.emit("answer", id, pc.localDescription);
+      //   });
+
+      // // pc.ontrack = (event) => {
+      // //   video.srcObject = event.streams[0];
+      // // };
+
+      // pc.onicecandidate = (event) => {
+      //   if (event.candidate) {
+      //     socket.emit("candidate", id, event.candidate);
+      //   }
+      // };
+    });
 
     socket.on("answer", (id: string, description: string) => {
-      peerConnections[id].setRemoteDescription(description);
+      console.log("answer call");
+      // peerConnections[id].setRemoteDescription(description);
     });
 
     socket.on("candidate", (id, candidate) => {
-      peerConnections[id].addIceCandidate(new RTCIceCandidate(candidate));
+      // console.log("candidate call", id);
+
+      console.log(peerConnections);
+      // peerConnections[id].addIceCandidate(new RTCIceCandidate(candidate));
     });
 
     socket.on("disconnectPeer", (id) => {
@@ -64,47 +93,58 @@ const App = () => {
   }, []);
 
   // handle dynamic refs for broacasters
-  useEffect(() => {
-    // add or remove refs
-    setVideoRefs((elRefs: any) =>
-      Array(broadcasters.length)
-        .fill(0)
-        .map((_, i) => elRefs[i] || createRef())
-    );
-  }, [broadcasters]);
+  // useEffect(() => {
+  //   // add or remove refs
+  //   setVideoRefs((elRefs: any) =>
+  //     Array(broadcasters.length)
+  //       .fill(0)
+  //       .map((_, i) => elRefs[i] || createRef())
+  //   );
+  // }, [broadcasters]);
 
   // handle dynamic refs for broacasters
   useEffect(() => {
-    console.log(peerConnections)
+    for (const [id, val] of Object.entries<any>(peerConnections)) {
+      if (!broadcasters.includes(id) && id !== userId) {
+        continue;
+      }
+
+      // pc.ontrack = (event) => {
+      //   video.srcObject = event.streams[0];
+      // };
+
+      val.pc.onicecandidate = (event: any) => {
+        if (event.candidate) {
+          socket.emit("candidate", id, event.candidate);
+        }
+      };
+    }
   }, [peerConnections]);
 
   const handleWatcher = (id: string) => {
-    const peerConnection: any = new RTCPeerConnection(STUN_CONFIG);
+    const pc: any = new RTCPeerConnection(STUN_CONFIG);
 
     setPeerConnections({
       ...peerConnections,
-      [id]: peerConnection,
+      [id]: {
+        id,
+        pc,
+      },
     });
 
     const stream: any = videoRef?.current?.srcObject;
-    stream
-      .getTracks()
-      .forEach((track: any) => peerConnection.addTrack(track, stream));
+    stream.getTracks().forEach((track: any) => pc.addTrack(track, stream));
 
-    peerConnection.onicecandidate = (event: any) => {
-
+    pc.onicecandidate = (event: any) => {
       if (event.candidate) {
-        console.log("onicecandidate", id, event);
         socket.emit("candidate", id, event.candidate);
       }
     };
 
-    peerConnection
-      .createOffer()
-      .then((sdp: any) => peerConnection.setLocalDescription(sdp))
+    pc.createOffer()
+      .then((sdp: any) => pc.setLocalDescription(sdp))
       .then(() => {
-        // console.log("Created offer", id, peerConnection.localDescription);
-        socket.emit("offer", id, peerConnection.localDescription);
+        socket.emit("offer", id, pc.localDescription);
       });
   };
 
@@ -126,7 +166,7 @@ const App = () => {
 
   return (
     <>
-      <button onClick={startStream}>Start</button>
+      <button onClick={startStream}>GO LIVE!!!</button>
 
       <Broadcasters broadcasters={broadcasters} />
       <Participants participants={participants} />
@@ -140,7 +180,7 @@ const App = () => {
           <div key={id}>
             <p>{id}</p>
             <video
-              // ref={videoRefs.current[index]}
+              // ref={videoRefs[index].current}
               autoPlay
               style={{
                 width: 200,
