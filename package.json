@@ -2,12 +2,11 @@
   "name": "pair-program",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "start": "cd server && npm start",
     "dev": "concurrently npm:client npm:server",
     "client": "cd client && npm start",
-    "server": "cd server && npm start",
+    "server": "cd server && npm run dev",
     "install:client": "cd client && npm install",
     "install:server": "cd server && npm install",
     "build:client": "cd client && npm run build",

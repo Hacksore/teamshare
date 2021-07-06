@@ -1,6 +1,6 @@
 {
-  "short_name": "pair-program",
-  "name": "A simple app to share two screens at once via WebRTC",
+  "short_name": "Teamshare Live",
+  "name": "A simple app to share multple screens at once via WebRTC",
   "icons": [
     {
       "src": "favicon.ico",

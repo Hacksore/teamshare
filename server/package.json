@@ -6,8 +6,8 @@
     "start": "node dist/server",
     "dev": "nodemon server.ts"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Hacksrore",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.17.1",
     "rtcmulticonnection-server": "^1.3.2",
