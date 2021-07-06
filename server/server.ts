@@ -10,9 +10,10 @@ const app = express();
 app.use(cors());
 
 const STATIC_ROOT = path.resolve(__dirname, "../../client/build");
-console.log(STATIC_ROOT);
-
 app.use(express.static(STATIC_ROOT));
+
+// handle SPA rewrite
+app.get("*", (req, res) => res.sendFile(`${STATIC_ROOT}/index.html`));
 
 const server = http.createServer(app);
 const io = require("socket.io")(server, { path: "/ws" });
