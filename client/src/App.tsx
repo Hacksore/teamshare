@@ -2,9 +2,34 @@ import { useRef, useState, useEffect, createRef } from "react";
 
 // @ts-ignore
 import RTCMultiConnection from "@hacksore/rtcmulticonnection";
+import { Button } from "@material-ui/core";
+import { makeStyles } from "@material-ui/styles";
+
+console.log(RTCMultiConnection)
+
+const useStyles = makeStyles(theme => ({
+  "@global body": {
+    background: "#000",
+    color: "#fff",
+  },
+  videoPreview: {
+    "& p": {
+      margin: 0,
+      padding: 0
+    }
+  },
+  videoPreviewWrap: {
+    position: "fixed",
+    bottom: 0,
+    display: "flex",
+    flexDirection: "row",
+  }
+}));
+
 
 const App = () => {
-  const videoRef = useRef(null);
+  const videoRef = useRef<any>(null);
+  const classes = useStyles();
   const connection = useRef<any>(null);
   const [broadcasters, setBroadcasters] = useState<any>([]);
 
@@ -35,6 +60,13 @@ const App = () => {
       ]));
     }
 
+    // remove users when they leave
+    connection.current.onstreamended =  function (event: any) {
+      console.log(event);
+      setBroadcasters((broadcasters: any) => {        
+        return broadcasters.filter((item: any) => item.id !== event.userid)        
+      });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -54,27 +86,32 @@ const App = () => {
     );
   };
 
+  const handleVideoSelect = (event: any) => {
+    videoRef.current.srcObject = event.target.srcObject;
+  }
+
   return (
-    <div style={{ width: "100%", height: "100%" }}>
-      {/* Hide our video */}
-      <video
-        ref={videoRef}
-        style={{ display: "none", width: 0, height: 0 }}
-        autoPlay
-      />
+    <div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <video ref={videoRef} autoPlay controls style={{ width: 900, height: 500, background: "red" }} />        
+      </div>
 
-      {broadcasters.map((user: any, index: number) => (
-        <>
-          <p>{user.id}</p>
-          <video
-            style={{ width: 300, height: 200 }}
-            ref={broadcasters[index].ref}
-            autoPlay
-          />
-        </>
-      ))}
 
-      <button onClick={goLive}>GO LIVE</button>
+      <div className={classes.videoPreviewWrap}>
+        {broadcasters.map((user: any, index: number) => (
+          <div className={classes.videoPreview}>
+            <p>{user.id}</p>
+            <video
+              onClick={handleVideoSelect}
+              style={{ width: 300, height: 200 }}
+              ref={broadcasters[index].ref}
+              autoPlay
+            />
+          </div>
+        ))}
+      </div>
+
+      <Button variant="contained" color="primary" onClick={goLive}>GO LIVE</Button>
       
     </div>
   );
