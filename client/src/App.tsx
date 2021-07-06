@@ -20,30 +20,30 @@ const App = () => {
 
     connection.current.session = {
       screen: true,
+      // oneway: true // allows you to join and not present
     };
 
     // try to join
-    connection.current.onstream = handleNewStream;
+    connection.current.onstream = function (event: any) {
+      setBroadcasters((broadcasters: any) => ([
+        ...broadcasters,
+        {
+          id: event.userid,
+          stream: event.stream,
+          ref: createRef(),
+        },
+      ]));
+    }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     // update the refs
-    for (const [index, value] of Object.entries(broadcasters)) {
-      // @ts-ignore
+    for (const [index, value] of Object.entries<any>(broadcasters)) {
       broadcasters[index].ref.current.srcObject = value.stream;
     }
   }, [broadcasters]);
-
-  const handleNewStream = (event: any) => {
-    setBroadcasters([
-      ...broadcasters,
-      {
-        id: event.userid,
-        stream: event.stream,
-        ref: createRef(),
-      },
-    ]);
-  };
 
   const goLive = () => {
     connection.current.openOrJoin(
@@ -54,10 +54,8 @@ const App = () => {
     );
   };
 
-  console.log(broadcasters);
-
   return (
-    <div>
+    <div style={{ width: "100%", height: "100%" }}>
       {/* Hide our video */}
       <video
         ref={videoRef}
@@ -66,15 +64,18 @@ const App = () => {
       />
 
       {broadcasters.map((user: any, index: number) => (
-        <video
-          style={{ width: "100%", height: "100%" }}
-          ref={broadcasters[index].ref}
-          autoPlay
-          controls
-        />
+        <>
+          <p>{user.id}</p>
+          <video
+            style={{ width: 300, height: 200 }}
+            ref={broadcasters[index].ref}
+            autoPlay
+          />
+        </>
       ))}
 
       <button onClick={goLive}>GO LIVE</button>
+      
     </div>
   );
 };
