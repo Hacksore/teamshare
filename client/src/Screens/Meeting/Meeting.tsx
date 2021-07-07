@@ -1,14 +1,16 @@
 import { useRef, useState, useEffect } from "react";
-
 import { makeStyles } from "@material-ui/styles";
+import { TextField } from "@material-ui/core";
 import Controls from "./Controls";
-
 import Peer from "peerjs";
+import { Participants } from "./Participants";
 
 export const Meeting = () => {
   const videoRef = useRef<any>(null);
+  const userRef = useRef<any>(null);
   const classes = useStyles();
   const [userId, setUserId] = useState<string | null>(null);
+  const [peers, setPeers] = useState<string[]>([]);
 
   useEffect(() => {
     // might need to store in ref to use elsewhere
@@ -27,37 +29,36 @@ export const Meeting = () => {
       setUserId(id);
 
       // atemp to call users in the room without any media
-      peer.listAllPeers((peers) => {
+      peer.listAllPeers((currentPeers) => {
         console.log("current users", peers);
-        for (const peerId of peers) {
-          if (peerId !== id) { // dont call urself
-            peer.connect(peerId);
-          }
-        }
+        setPeers(currentPeers);
       });
     });
 
     // anwser calls
     peer.on("call", (call) => {
       call.answer();
-      call.on("stream", (remoteStream) => {
-        
-      });
+      call.on("stream", (remoteStream) => {});
     });
 
     // on connection
     peer.on("connection", (conn: any) => {
-      console.log("got connection")
+      console.log("got connection");
     });
+
+    userRef.current = peer;
   }, []);
 
   const handleGoLive = () => {
-    // go live
+    peers.forEach(peer => {
+      console.log(peer);
+      if (userId !== peer) userRef.current.connect(peer);
+    })
   };
 
   return (
     <div>
-      <h2>Userid: {userId}</h2>
+      <TextField id="userid" label="Username" defaultValue={userId} style={{ width: 300, margin: 8 }} />
       <div
         style={{
           width: 1200,
@@ -70,8 +71,7 @@ export const Meeting = () => {
         <video ref={videoRef} autoPlay style={{ background: "#000" }} />
         <Controls ref={videoRef} isSharing={false} onGoLive={handleGoLive} />
       </div>
-
-      <div className={classes.videoPreviewWrap}></div>
+      <Participants participants={["alex o", "jack", "sean b"]}/>
     </div>
   );
 };

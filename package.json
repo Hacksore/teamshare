@@ -21,5 +21,8 @@
   },
   "devDependencies": {
     "concurrently": "^6.2.0"
+  },
+  "dependencies": {
+    "clsx": "^1.1.1"
   }
 }
