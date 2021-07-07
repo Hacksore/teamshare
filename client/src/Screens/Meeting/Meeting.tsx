@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect, createRef } from "react";
 
-import RecordIcon from "@material-ui/icons/LiveTv";
+
 // @ts-ignore
 import RTCMultiConnection from "@hacksore/rtcmulticonnection";
-import { Button } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
 import { useParams } from "react-router-dom";
+import Controls from "./Controls";
+
 const useStyles = makeStyles((theme) => ({
   videoPreview: {
     "& p": {
@@ -71,7 +72,7 @@ export const Meeting = () => {
     }
   }, [broadcasters]);
 
-  const goLive = () => {
+  const handleGoLive = () => {
     connection.current.openOrJoin(
       params.id,
       (isRoomOpened: boolean, roomid: string, error: any) => {
@@ -102,16 +103,12 @@ export const Meeting = () => {
           autoPlay
           style={{ background: "#000" }}
         />
-        {!isSharing && (
-          <Button
-            variant="contained"
-            onClick={goLive}
-            color="primary"
-            startIcon={<RecordIcon />}
-          >
-            Share Screen
-          </Button>
-        )}
+        <Controls 
+          ref={videoRef}
+          isSharing={isSharing}
+          onGoLive={handleGoLive}
+        />
+       
       </div>
 
       <div className={classes.videoPreviewWrap}>

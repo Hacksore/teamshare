@@ -69,10 +69,10 @@ const useStyles = makeStyles((theme: any) => ({
   largeButton: {
     textTransform: "none",
     fontSize: 44,
-    borderWidth: 8,
+    borderWidth: 4,
     color: theme.palette.primary.contrastText,
     margin: "0 10px 0 10px",
-    width: 300,
-    height: 130,
+    width: 250,
+    height: 100,
   },
 }));
