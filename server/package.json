@@ -9,8 +9,8 @@
   "author": "Hacksrore",
   "license": "MIT",
   "dependencies": {
+    "@hacksore/peer": "file:../../peerjs-server",
     "express": "^4.17.1",
-    "peer": "^0.6.1",
     "rtcmulticonnection-server": "^1.3.2",
     "socket.io": "^4.1.2",
     "uuid": "^8.3.2"
