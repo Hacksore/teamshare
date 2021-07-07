@@ -1,10 +1,11 @@
-import http from "http";
 import path from "path";
 import express from "express";
-import RTCMultiConnectionServer from "rtcmulticonnection-server";
+import { ExpressPeerServer } from "peer";
 import cors from "cors";
+import http from "http";
 
-const PORT = process.env.PORT || 8000;
+// @ts-ignore
+const PORT: number = parseInt(process.env.PORT) || 8000;
 const app = express();
 
 app.use(cors());
@@ -12,16 +13,26 @@ app.use(cors());
 const STATIC_ROOT = path.resolve(__dirname, "../../client/build");
 app.use(express.static(STATIC_ROOT));
 
+const server = http.createServer(app);
+const peerServer = ExpressPeerServer(server, {
+  // @ts-ignore
+  debug: true,
+  allow_discovery: true,
+  port: PORT,
+  path: "/",
+});
+
+app.use("/peerjs", peerServer);
+
+peerServer.on('connection', (client) => { 
+  // console.log(client);
+});
+
+peerServer.on('disconnect', (client) => { 
+  // console.log(client);
+});
+
 // handle SPA rewrite
 app.get("*", (req, res) => res.sendFile(`${STATIC_ROOT}/index.html`));
 
-const server = http.createServer(app);
-const io = require("socket.io")(server, { path: "/ws" });
-
-io.on("connection", function (socket) {
-  RTCMultiConnectionServer.addSocket(socket);
-});
-
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+server.listen(PORT);
