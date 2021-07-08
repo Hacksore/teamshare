@@ -3,7 +3,6 @@ import express from "express";
 import { ExpressPeerServer } from "@hacksore/peer";
 import cors from "cors";
 import http from "http";
-import e from "express";
 
 // @ts-ignore
 const PORT: number = parseInt(process.env.PORT) || 8000;
@@ -26,15 +25,20 @@ const peerServer: any = ExpressPeerServer(server, {
 
 app.use("/peerjs", peerServer);
 
-peerServer.on("connection", (client) => {});
-peerServer.on("disconnect", (client) => {});
+peerServer.on("connection", (client) => {
+
+});
+
+peerServer.on("disconnect", (client) => {
+  // console.log(client);
+});
 
 app.get("/peerjs/test", (req: any, res) => {  
   res.send(req.userId);
 });
 
+// we create room
 app.post("/peerjs/room", (req: any, res) => {
-  // we create room
   const { roomId } = req.body;
   const userId = req.userId;
   const roomExists = rooms[roomId] !== undefined;
@@ -54,6 +58,29 @@ app.post("/peerjs/room", (req: any, res) => {
   }
 });
 
+//join room
+app.put("/peerjs/room", (req: any, res) => {
+  const { roomId } = req.body;
+  const userId = req.userId;
+  const roomExists = rooms[roomId] !== undefined;
+  console.log("create room for ", userId);
+  
+  if (roomExists) {
+
+    if (rooms[roomId].participants.includes(userId)) {
+      return res.send({ status: "already in room" });
+    }
+
+    /// push
+    rooms[roomId].participants.push(userId); 
+    res.send({ status: "joined room" });
+
+  } else {
+
+    res.send({ status: "room is not avail" });
+  }
+});
+
 app.get("/peerjs/participants/:roomId", (req: any, res) => {  
   const { roomId } = req.params;
   const roomExists = rooms[roomId] !== undefined;
@@ -61,12 +88,11 @@ app.get("/peerjs/participants/:roomId", (req: any, res) => {
 
   if (!roomExists) {
     res.send({
-      participants: [],
+      participants: [userId],
       exists: false
     });
   } else {
-
-    // prolly not a good idea
+    
     // rooms[roomId].participants.push(userId);
 
     res.send({

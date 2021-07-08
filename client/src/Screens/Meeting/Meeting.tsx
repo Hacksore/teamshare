@@ -1,139 +1,84 @@
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { makeStyles } from "@material-ui/styles";
 import Controls from "./Controls";
-import Peer from "peerjs";
 import Participants from "./Participants";
-import { useParams } from "react-router-dom";
-import { createRoom, getRoomParticipants } from "../../services/room";
-
-// TODO: figureout how to do rooms as they are required
+import { usePeerConnection } from "../../hooks/usePeerConnection";
+import { useRecoilState } from "recoil";
+import { peersAtom, userSettingsAtom } from "../../state";
 
 export const Meeting = () => {
-  const videoRef = useRef<any>(null);
-  const userRef = useRef<any>(null);
+  const mainVideoRef = useRef<any>(null);
   const classes = useStyles();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [peers, setPeers] = useState<string[]>([]);
-
-
-  // const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const isStreaming: any = useRef();
-
-  const params: any = useParams();
+  const [userSettings, setUserSettings] = useRecoilState(userSettingsAtom);
+  const [peers, setPeers] = useRecoilState<any>(peersAtom);
+  const peerRef = useRef<any>(peers);
+  
+  const setParticipantStream = ({ id, stream } : any) => {
+    setPeers({
+      ...peerRef.current,
+      [id]: { id, stream }
+    });
+  }
 
   useEffect(() => {
-    // might need to store in ref to use elsewhere
-    const peer = new Peer({
-      // debug: 4,
-      host: window.location.hostname,
-      port: parseInt(window.location.port),
-      path: "/peerjs",
-      config: {
-        iceServers: [{ urls: "stun:stun1.l.google.com:19302" }],
-      },
-    });
+    peerRef.current = peers
+  }, [peers]);
 
-    peer.on("open", async (id) => {
-      // save id from server locally
-      setUserId(id);
-
-      const response = await getRoomParticipants(params.id);
-      console.log("room participants", response.participants);
-      setPeers(response.participants);
-
-      if (!response.exists) {
-        // create the room
-        await createRoom(params.id);
-      }
-
-      // TODO: all the broadcasters have to start teh call to the viewers
-      // call all peers
-      for (const peerId of response.participants) {
-        if (id === peerId) {
-          return // dont call yourself
-        }
-        
-        console.log("start data channel", peerId);
-        const conn = peer.connect(peerId);
-        conn.on("open", () => {
-          conn.send("streaming");
-        });
-
-        conn.on("data", (data: any) => {
-          console.log("client ack", data);          
-          // peer.call(peerId, stream);
-
-        })
-      }
-    });
-
-    // anwser calls
-    peer.on("call", async (call) => {
-      console.log("getting a call rn");
-
-      // @ts-ignore
-      call.answer();
-
-      //
-      call.on("stream", (remoteStream) => {
-        console.log("got a remote stream");
-        videoRef.current.srcObject = remoteStream;
-      });
-    });
-
-    // on connection
-    peer.on("connection", (conn: any) => {
-      conn.on("data", (data: any) => {
-        console.log("data stream opened");
-        if (isStreaming.current) {
-          console.log("I need to call this new client", conn);
-          peer.call(conn.peer, videoRef.current.srcObject);
-        }
-      });
-
-      conn.on("open", () => {
-        conn.send("hello!");
-      });
-    });
-
-    userRef.current = peer;
-  }, []);
-
+  // everything will be in global state?
+  usePeerConnection({ setParticipantStream });
 
   const handleGoLive = async () => {
     try {
-      // @ts-ignore
+      // @ts-ignore TODO: fix ts error
       const stream = await navigator.mediaDevices.getDisplayMedia();
-      videoRef.current.srcObject = stream;
-    
-      isStreaming.current = true;
-    } catch {
-      isStreaming.current = false;
+
+      // updated peers with my stream
+      const updatedPeers = JSON.parse(JSON.stringify(peers));
+      if (userSettings.id) {
+        updatedPeers[userSettings.id].stream = stream;
+        setPeers(updatedPeers);
+      }
+
+      setUserSettings({
+        ...userSettings,
+        isStreaming: true,
+        stream: stream
+      });
+    } catch (err) {
+      console.log(err);
+      setUserSettings({
+        ...userSettings,
+        isStreaming: false,
+        stream: undefined
+      });
     }
   };
 
   return (
     <div>
-      {userId}
-      <div
-        style={{
-          width: 1200,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          margin: "0 auto",
-        }}
-      >
-        <video ref={videoRef} autoPlay style={{ background: "#000" }} />
-        <Controls ref={videoRef} isSharing={false} onGoLive={handleGoLive} />
+      {userSettings.id} - {userSettings.isStreaming.toString()}
+      <div className={classes.root}>
+        <video ref={mainVideoRef} autoPlay style={{ background: "#000" }} />
+        <Controls
+          ref={mainVideoRef}
+          isSharing={false}
+          onGoLive={handleGoLive}
+        />
       </div>
 
-      <Participants participants={["Alex O", "Jack B", "Sean b"]} />
+      <Participants mainStageRef={mainVideoRef}/>
     </div>
   );
 };
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    width: 1200,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    margin: "0 auto",
+  },
   videoPreview: {
     "& p": {
       margin: 0,

@@ -22,3 +22,17 @@ export const createRoom = async (id: string) => {
   .then(res => res.json());
 
 }
+
+export const joinRoom = async (id: string) => {
+  return fetch("/peerjs/room", {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      roomId: id
+    })
+  })
+  .then(res => res.json());
+
+}
