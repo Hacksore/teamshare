@@ -61,7 +61,6 @@ export const Participants = (props: any) => {
   const [open, setOpen] = useState(true);
   const peers = useRecoilValue(peersAtom);
   const userSettings = useRecoilValue(userSettingsAtom);
-  console.log("my peers are: ", peers)
 
   const handleStageView = (stream: any) => {    
     props.mainStageRef.current.srcObject = stream;

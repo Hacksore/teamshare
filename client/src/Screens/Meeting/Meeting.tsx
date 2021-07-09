@@ -12,20 +12,25 @@ export const Meeting = () => {
   const [userSettings, setUserSettings] = useRecoilState(userSettingsAtom);
   const [peers, setPeers] = useRecoilState<any>(peersAtom);
   const peerRef = useRef<any>(peers);
-  
-  const setParticipantStream = ({ id, stream } : any) => {
+
+  const setParticipantStream = ({ id, stream }: any) => {
     setPeers({
       ...peerRef.current,
-      [id]: { id, stream }
+      [id]: { id, stream },
     });
-  }
+  };
+
+  const getCurrentLocalVideoRef = () => {
+    // @ts-ignore
+    return peerRef.current[userSettings.id].stream;
+  };
 
   useEffect(() => {
-    peerRef.current = peers
+    peerRef.current = peers;
   }, [peers]);
 
   // everything will be in global state?
-  usePeerConnection({ setParticipantStream });
+  usePeerConnection({ setParticipantStream, getCurrentLocalVideoRef });
 
   const handleGoLive = async () => {
     try {
@@ -42,31 +47,34 @@ export const Meeting = () => {
       setUserSettings({
         ...userSettings,
         isStreaming: true,
-        stream: stream
+        stream: stream,
       });
     } catch (err) {
       console.log(err);
       setUserSettings({
         ...userSettings,
         isStreaming: false,
-        stream: undefined
+        stream: undefined,
       });
     }
   };
 
   return (
     <div>
-      {userSettings.id} - {userSettings.isStreaming.toString()}
       <div className={classes.root}>
-        <video ref={mainVideoRef} autoPlay style={{ background: "#000" }} />
-        <Controls
-          ref={mainVideoRef}
-          isSharing={false}
-          onGoLive={handleGoLive}
-        />
+        <div className={classes.videoRoot}>
+          <video ref={mainVideoRef} autoPlay className={classes.video}/>
+          <div className={classes.videoControls}>
+            <Controls
+              ref={mainVideoRef}
+              isSharing={false}
+              onGoLive={handleGoLive}
+            />
+          </div>
+        </div>
       </div>
 
-      <Participants mainStageRef={mainVideoRef}/>
+      <Participants mainStageRef={mainVideoRef} />
     </div>
   );
 };
@@ -85,10 +93,22 @@ const useStyles = makeStyles((theme) => ({
       padding: 0,
     },
   },
+  video: {
+    width: 1200,
+    background: "#000",
+  },
   videoPreviewWrap: {
     position: "fixed",
     bottom: 0,
     display: "flex",
     flexDirection: "row",
   },
+  videoRoot: {
+    position: "relative",
+  },
+  videoControls: {
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+  },  
 }));

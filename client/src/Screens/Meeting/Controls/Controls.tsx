@@ -1,10 +1,12 @@
 import { forwardRef } from "react";
-import { Button } from "@material-ui/core";
+import { Button, makeStyles, IconButton } from "@material-ui/core";
+
 import RecordIcon from "@material-ui/icons/LiveTv";
 import ExpandIcon from "@material-ui/icons/Fullscreen";
 
 export const Controls = forwardRef((props: any, ref: any) => {
   const { isSharing, onGoLive } = props;
+  const classes = useStyles();
 
   const handleFullscreen = () => {
     if (ref.current) {
@@ -14,24 +16,29 @@ export const Controls = forwardRef((props: any, ref: any) => {
 
   return (
     <div>
-      <Button
-        variant="contained"
+      <IconButton
+        classes={{ root: classes.fancyButton }}
         onClick={onGoLive}
-        color="primary"
+        color="secondary"
         disabled={isSharing}
-        startIcon={<RecordIcon />}
       >
-        Share Screen
-      </Button>
+        <RecordIcon />
+      </IconButton>
 
-      <Button
+      <IconButton
+        classes={{ root: classes.fancyButton }}
         onClick={handleFullscreen}
-        variant="contained"
-        color="primary"
-        startIcon={<ExpandIcon />}
+        color="secondary"
+        // startIcon={<ExpandIcon />}
       >
-        Fullscreen
-      </Button>
+        <ExpandIcon />
+      </IconButton>
     </div>
   );
 });
+
+const useStyles = makeStyles((theme) => ({
+  fancyButton: {
+    marginRight: 12
+  }
+}));

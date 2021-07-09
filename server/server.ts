@@ -14,7 +14,13 @@ app.use(express.json());
 const STATIC_ROOT = path.resolve(__dirname, "../../client/build");
 app.use(express.static(STATIC_ROOT));
 
-const rooms = {};
+const rooms = {
+  "test": {
+    "participants": {
+      "ayylmao": true
+    }
+  }
+};
 
 const server = http.createServer(app);
 const peerServer: any = ExpressPeerServer(server, {
@@ -30,7 +36,12 @@ peerServer.on("connection", (client) => {
 });
 
 peerServer.on("disconnect", (client) => {
-  // console.log(client);
+
+  for (const [roomId, value] of Object.entries<any>(rooms)) {
+    delete rooms[roomId].participants[client.id];
+    // client.socket.emit()
+  }
+  
 });
 
 app.get("/peerjs/test", (req: any, res) => {  
@@ -42,17 +53,23 @@ app.post("/peerjs/room", (req: any, res) => {
   const { roomId } = req.body;
   const userId = req.userId;
   const roomExists = rooms[roomId] !== undefined;
-  console.log("create room for ", userId);
+  console.log("create room for", userId);
   
   if (!roomExists) {
     rooms[roomId] = {
-      participants: [userId],
+      participants: {
+        [userId]: true
+      },
     };
   
     res.send({ status: "created room" });
   } else {
 
-    rooms[roomId].participants.push(userId);
+    // why are we adding here?
+    // rooms[roomId].participants = {
+    //   ...rooms[roomId].participants,
+    //   [userId]: true
+    // };
 
     res.send({ status: "room already exists" });
   }
@@ -63,20 +80,20 @@ app.put("/peerjs/room", (req: any, res) => {
   const { roomId } = req.body;
   const userId = req.userId;
   const roomExists = rooms[roomId] !== undefined;
-  console.log("create room for ", userId);
   
   if (roomExists) {
-
-    if (rooms[roomId].participants.includes(userId)) {
+    if (rooms[roomId].participants[userId]) {
       return res.send({ status: "already in room" });
     }
 
-    /// push
-    rooms[roomId].participants.push(userId); 
+    // add user
+    rooms[roomId].participants = {
+      ...rooms[roomId].participants,
+      [userId]: true
+    }; 
     res.send({ status: "joined room" });
 
   } else {
-
     res.send({ status: "room is not avail" });
   }
 });
@@ -88,13 +105,12 @@ app.get("/peerjs/participants/:roomId", (req: any, res) => {
 
   if (!roomExists) {
     res.send({
-      participants: [userId],
+      participants: {
+        [userId]: true
+      },
       exists: false
     });
   } else {
-    
-    // rooms[roomId].participants.push(userId);
-
     res.send({
       participants: rooms[roomId].participants,
       exists: true

@@ -1,12 +1,20 @@
-export const getRoomParticipants = async (id: string) => {
+interface IRoomParticpants {
+  participants: string[];
+  exists: boolean;
+}
+
+export const getRoomParticipants = async (id: string): Promise<IRoomParticpants> => {
   // Get a list of all peers
   const response = await fetch(`/peerjs/participants/${id}`, {
     method: "GET"   
   })
   .then(res => res.json());
-
-  return response;
-
+  
+  const ids = Object.keys(response.participants);
+  return {
+    participants: ids,
+    exists: response.exists
+  }
 }
 
 export const createRoom = async (id: string) => {

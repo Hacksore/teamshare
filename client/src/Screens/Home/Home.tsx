@@ -14,7 +14,7 @@ export const Home = () => {
           root: classes.quoteWrapper,
         }}
       >
-        Simple screen sharing without the need for any software 😎
+        "Simple" screen sharing without the need for any software 😎
       </Typography>
 
       <div className={classes.buttonWrapper}>
