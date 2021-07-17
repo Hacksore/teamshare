@@ -1,12 +1,17 @@
 import path from "path";
 import express from "express";
-import { ExpressPeerServer } from "@hacksore/peer";
+import { Server } from "socket.io";
 import cors from "cors";
 import http from "http";
 
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  path: "/ws",
+});
+
 // @ts-ignore
 const PORT: number = parseInt(process.env.PORT) || 8000;
-const app = express();
 
 app.use(cors());
 app.use(express.json());
@@ -14,109 +19,67 @@ app.use(express.json());
 const STATIC_ROOT = path.resolve(__dirname, "../../client/build");
 app.use(express.static(STATIC_ROOT));
 
-const rooms = {
-  "test": {
-    "participants": {
-      "ayylmao": true
-    }
-  }
-};
+// const currentUsers = {};
+const rooms = {};
 
-const server = http.createServer(app);
-const peerServer: any = ExpressPeerServer(server, {
-  allow_discovery: true,
-  port: PORT,
-  path: "/",
-});
+io.on("connection", (socket: any) => {
+  const { id: socketId } = socket;
 
-app.use("/peerjs", peerServer);
+  socket.on("join-room", async (roomId) => {
+    console.log("join roomid", roomId);
 
-peerServer.on("connection", (client) => {
+    // join room
+    await socket.join(roomId);
 
-});
+    // tell all users about members
+    // @ts-ignore
+    const roomUsers = Array.from(io.sockets.adapter.rooms.get(roomId));
+    io.to(roomId).emit("list-room-users", roomUsers);
 
-peerServer.on("disconnect", (client) => {
+    socket.emit("my-id", socketId);
 
-  for (const [roomId, value] of Object.entries<any>(rooms)) {
-    delete rooms[roomId].participants[client.id];
-    // client.socket.emit()
-  }
-  
-});
+    // set the room id
+    socket.roomId = roomId;
+  });
 
-app.get("/peerjs/test", (req: any, res) => {  
-  res.send(req.userId);
-});
+  // when the user disconnects.. perform this
+  socket.on("disconnect", async () => {
+    await socket.leave(socket.roomId);
 
-// we create room
-app.post("/peerjs/room", (req: any, res) => {
-  const { roomId } = req.body;
-  const userId = req.userId;
-  const roomExists = rooms[roomId] !== undefined;
-  console.log("create room for", userId);
-  
-  if (!roomExists) {
-    rooms[roomId] = {
-      participants: {
-        [userId]: true
-      },
-    };
-  
-    res.send({ status: "created room" });
-  } else {
-
-    // why are we adding here?
-    // rooms[roomId].participants = {
-    //   ...rooms[roomId].participants,
-    //   [userId]: true
-    // };
-
-    res.send({ status: "room already exists" });
-  }
-});
-
-//join room
-app.put("/peerjs/room", (req: any, res) => {
-  const { roomId } = req.body;
-  const userId = req.userId;
-  const roomExists = rooms[roomId] !== undefined;
-  
-  if (roomExists) {
-    if (rooms[roomId].participants[userId]) {
-      return res.send({ status: "already in room" });
+    const roomUsers = io.sockets.adapter.rooms.get(socket.roomId);
+    if (!roomUsers) {
+      return;
     }
 
-    // add user
-    rooms[roomId].participants = {
-      ...rooms[roomId].participants,
-      [userId]: true
-    }; 
-    res.send({ status: "joined room" });
+    // @ts-ignore
+    const roomUsersArray = Array.from(roomUsers);
 
-  } else {
-    res.send({ status: "room is not avail" });
-  }
-});
+    // tell users about peple
+    io.to(socket.roomId).emit("list-room-users", roomUsersArray);
+  });
 
-app.get("/peerjs/participants/:roomId", (req: any, res) => {  
-  const { roomId } = req.params;
-  const roomExists = rooms[roomId] !== undefined;
-  const userId = req.userId;
+  // ##############
+  /// WEB RTC STUFF
+  // ##############
 
-  if (!roomExists) {
-    res.send({
-      participants: {
-        [userId]: true
-      },
-      exists: false
-    });
-  } else {
-    res.send({
-      participants: rooms[roomId].participants,
-      exists: true
-    });
-  }
- 
+  socket.on("newUserStart", (data) => {
+    socket.to(data.to).emit("newUserStart", { sender: data.sender });
+  });
+
+  socket.on("sdp", (data) => {
+    socket
+      .to(data.to)
+      .emit("sdp", { description: data.description, sender: data.sender });
+  });
+
+  socket.on("ice candidates", (data) => {
+    socket
+      .to(data.to)
+      .emit("ice candidates", {
+        candidate: data.candidate,
+        sender: data.sender,
+      });
+  });
 });
 
 // handle SPA rewrite

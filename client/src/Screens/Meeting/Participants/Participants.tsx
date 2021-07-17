@@ -8,6 +8,7 @@ import { useRecoilValue } from "recoil";
 import { peersAtom, userSettingsAtom } from  "../../../state";
 
 const OpenParticipant = ({ id, stream, onClick }: { id: string, stream: any, onClick: any }) => {
+  const color = Math.floor(Math.random() * 255);
   const videoRef = useRef<any>(null);
   
   useEffect(() => {
@@ -20,29 +21,30 @@ const OpenParticipant = ({ id, stream, onClick }: { id: string, stream: any, onC
       style={{
         width: 250,
         height: 150,
-        background: "#000",
+        background: `#${color}`,
         margin: "0 4px 0 4px",
         padding: "0 8px 8px 8px",
         fontWeight: "bold",
         display: "flex",
         position: "relative",
-        // alignItems: "flex-end",
       }}
     >
       <span style={{ zIndex: 1999, position: "absolute", top: 0, left: 0, color: "#fff"}}>{id}</span>
-      <video ref={videoRef} autoPlay style={{ background: "#c1c1c1", width: "100%", height: "auto", }} />
+      <video ref={videoRef} autoPlay style={{ width: "100%", height: "auto", }} />
     </div>
   );
 };
 
 const ClosedParticipant = ({ id, onClick }: { id: string, onClick: any }) => {
+  const color = Math.floor(Math.random() * 255);
+
   return (
     <div
       onClick={onClick}
       style={{
         height: 48,
         width: 48,
-        backgroundColor: "#000",
+        backgroundColor: `#${color}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -61,6 +63,10 @@ export const Participants = (props: any) => {
   const [open, setOpen] = useState(true);
   const peers = useRecoilValue(peersAtom);
   const userSettings = useRecoilValue(userSettingsAtom);
+
+  useEffect(() => {
+    // get peers
+  }, [])
 
   const handleStageView = (stream: any) => {    
     props.mainStageRef.current.srcObject = stream;
