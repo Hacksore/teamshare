@@ -5,6 +5,7 @@ import Participants from "./Participants";
 import { usePeerConnection } from "../../hooks/usePeerConnection";
 import { useRecoilState } from "recoil";
 import { peersAtom, userSettingsAtom } from "../../state";
+import { useSocketConnection } from "../../hooks/useSocketConnection";
 
 export const Meeting = () => {
   const mainVideoRef = useRef<any>(null);
@@ -31,6 +32,8 @@ export const Meeting = () => {
 
   // everything will be in global state?
   usePeerConnection({ setParticipantStream, getCurrentLocalVideoRef });
+
+  useSocketConnection()
 
   const handleGoLive = async () => {
     try {

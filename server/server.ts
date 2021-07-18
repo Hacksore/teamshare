@@ -1,12 +1,22 @@
 import path from "path";
 import express from "express";
 import { ExpressPeerServer } from "@hacksore/peer";
+import { Server } from "socket.io";
 import cors from "cors";
 import http from "http";
 
+const app = express();
+const server = http.createServer(app);
+
+const socketIo = new Server(server, {
+  path: "/ws",
+  transports: ["websocket"],
+});
+
+const io = socketIo.listen(8001);
+
 // @ts-ignore
 const PORT: number = parseInt(process.env.PORT) || 8000;
-const app = express();
 
 app.use(cors());
 app.use(express.json());
@@ -14,15 +24,6 @@ app.use(express.json());
 const STATIC_ROOT = path.resolve(__dirname, "../../client/build");
 app.use(express.static(STATIC_ROOT));
 
-const rooms = {
-  "test": {
-    "participants": {
-      "ayylmao": true
-    }
-  }
-};
-
-const server = http.createServer(app);
 const peerServer: any = ExpressPeerServer(server, {
   allow_discovery: true,
   port: PORT,
@@ -32,91 +33,47 @@ const peerServer: any = ExpressPeerServer(server, {
 app.use("/peerjs", peerServer);
 
 peerServer.on("connection", (client) => {
-
 });
 
 peerServer.on("disconnect", (client) => {
-
-  for (const [roomId, value] of Object.entries<any>(rooms)) {
-    delete rooms[roomId].participants[client.id];
-    // client.socket.emit()
-  }
-  
 });
 
-app.get("/peerjs/test", (req: any, res) => {  
-  res.send(req.userId);
-});
+io.on("connection", (socket: any) => {
+  const { id: socketId } = socket;
 
-// we create room
-app.post("/peerjs/room", (req: any, res) => {
-  const { roomId } = req.body;
-  const userId = req.userId;
-  const roomExists = rooms[roomId] !== undefined;
-  console.log("create room for", userId);
-  
-  if (!roomExists) {
-    rooms[roomId] = {
-      participants: {
-        [userId]: true
-      },
-    };
-  
-    res.send({ status: "created room" });
-  } else {
+  socket.on("join-room", async (roomId) => {
+    console.log("join roomid", roomId);
 
-    // why are we adding here?
-    // rooms[roomId].participants = {
-    //   ...rooms[roomId].participants,
-    //   [userId]: true
-    // };
+    // join room
+    await socket.join(roomId);
 
-    res.send({ status: "room already exists" });
-  }
-});
+    // tell all users about members
+    // @ts-ignore
+    const roomUsers = Array.from(io.sockets.adapter.rooms.get(roomId));
+    io.to(roomId).emit("list-room-users", roomUsers);
 
-//join room
-app.put("/peerjs/room", (req: any, res) => {
-  const { roomId } = req.body;
-  const userId = req.userId;
-  const roomExists = rooms[roomId] !== undefined;
-  
-  if (roomExists) {
-    if (rooms[roomId].participants[userId]) {
-      return res.send({ status: "already in room" });
+    socket.emit("my-id", socketId);
+
+    // set the room id
+    socket.roomId = roomId;
+  });
+
+  // when the user disconnects.. perform this
+  socket.on("disconnect", async () => {
+    await socket.leave(socket.roomId);
+
+    const roomUsers = io.sockets.adapter.rooms.get(socket.roomId);
+    if (!roomUsers) {
+      return;
     }
 
-    // add user
-    rooms[roomId].participants = {
-      ...rooms[roomId].participants,
-      [userId]: true
-    }; 
-    res.send({ status: "joined room" });
+    // @ts-ignore
+    const roomUsersArray = Array.from(roomUsers);
 
-  } else {
-    res.send({ status: "room is not avail" });
-  }
-});
+    // tell users about peple
+    io.to(socket.roomId).emit("list-room-users", roomUsersArray);
+  });
 
-app.get("/peerjs/participants/:roomId", (req: any, res) => {  
-  const { roomId } = req.params;
-  const roomExists = rooms[roomId] !== undefined;
-  const userId = req.userId;
-
-  if (!roomExists) {
-    res.send({
-      participants: {
-        [userId]: true
-      },
-      exists: false
-    });
-  } else {
-    res.send({
-      participants: rooms[roomId].participants,
-      exists: true
-    });
-  }
- 
 });
 
 // handle SPA rewrite
