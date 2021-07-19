@@ -1,6 +1,6 @@
 import path from "path";
 import express from "express";
-import { ExpressPeerServer } from "@hacksore/peer";
+import { ExpressPeerServer } from "peer";
 import { Server } from "socket.io";
 import cors from "cors";
 import http from "http";
