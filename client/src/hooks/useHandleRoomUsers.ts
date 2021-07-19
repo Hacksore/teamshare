@@ -34,13 +34,13 @@ export const useHandleRoomUsers = (peerJS: any) => {
           continue; // don't call yourself
         }
 
-        const call = peerJS.call(user.peerId, userInfo.stream);
+        const call = peerJS.call(user.peerId, new MediaStream());
         call.on("stream", (remoteStream: any) => {    
           // console.log("got a remote stream", call, remoteStream);
-          // setPeerStream({
-          //   peerId: user.peerId,
-          //   stream: remoteStream,
-          // });
+          setPeerStream({
+            peerId: user.peerId,
+            stream: remoteStream,
+          });
         });
       }
     },
@@ -50,7 +50,7 @@ export const useHandleRoomUsers = (peerJS: any) => {
   const handleRoomUserUpdate = useCallback(
     (users: any) => {
       if (isFirstJoin) {
-        // callAllPeers(users);
+        callAllPeers(users);
         setIsFirstJoin(false);
       }
 

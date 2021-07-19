@@ -1,9 +1,12 @@
 import path from "path";
 import express from "express";
 import { ExpressPeerServer } from "@hacksore/peer";
-import { Socket, Server } from "socket.io";
+import { Server } from "socket.io";
 import cors from "cors";
 import http from "http";
+
+const PEERJS_PORT = 8000
+const SOCKETIO_PORT = 8001
 
 const app = express();
 const server = http.createServer(app);
@@ -13,10 +16,7 @@ const socketIo = new Server(server, {
   transports: ["websocket"],
 });
 
-const io = socketIo.listen(8001);
-
-// @ts-ignore
-const PORT: number = parseInt(process.env.PORT) || 8000;
+const io = socketIo.listen(SOCKETIO_PORT);
 
 app.use(cors());
 app.use(express.json());
@@ -26,7 +26,7 @@ app.use(express.static(STATIC_ROOT));
 
 const peerServer: any = ExpressPeerServer(server, {
   allow_discovery: true,
-  port: PORT,
+  port: PEERJS_PORT,
   path: "/",
 });
 
@@ -100,4 +100,4 @@ io.on("connection", (socket: any) => {
 // handle SPA rewrite
 app.get("*", (req, res) => res.sendFile(`${STATIC_ROOT}/index.html`));
 
-server.listen(PORT);
+server.listen(PEERJS_PORT);
