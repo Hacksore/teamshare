@@ -3,7 +3,7 @@ import { makeStyles } from "@material-ui/styles";
 import Controls from "./Controls";
 import Participants from "./Participants";
 import { usePeerConnection } from "../../hooks/usePeerConnection";
-import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import {
   peersAtom,
   peerStreamSetSelector,
@@ -12,7 +12,7 @@ import {
 } from "../../state";
 import SocketService from "../../services/socket";
 import { useState } from "react";
-import { useCallback } from "react";
+import { useHandleRoomUsers } from "../../hooks/useHandleRoomUsers";
 
 export const Meeting = () => {
   const mainVideoRef = useRef<any>(null);
@@ -20,77 +20,33 @@ export const Meeting = () => {
   const setUserInfo = useSetRecoilState(userInfoSelector);
   const setPeerStream = useSetRecoilState(peerStreamSetSelector);
   const userInfo = useRecoilValue(userSettingsAtom);
-  const [peers, setPeers] = useRecoilState(peersAtom);
-  const [isFirstJoin, setIsFirstJoin] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
+  const peers = useRecoilValue(peersAtom);
 
-  // maybe move this too;
   const peerJS = usePeerConnection();
-
-  const callAllPeers = useCallback((users: any) => {
-    // console.log("downastream", peerJS);
-
-    for (const user of users) {
-      // console.log("calling peer", user.peerId);
-      if (user.peerId === userInfo.peerId) {
-        continue; // don't call yourself
-      }
-
-      // console.log(peerJS)
-      // const call = peerJS.call(user.peerId, new MediaStream());
-      // call.on('stream', (remoteStream: any) => {
-      //   // Show stream in some video/canvas element.
-      //   setPeerStream({
-      //     peerId: user.peerId,
-      //     stream: remoteStream,
-      //   });
-
-      // });
-    }
-  }, [peerJS, userInfo]);
-
-  const handleRoomUserUpdate = useCallback(
-    (users: any) => {
-      console.log("users",users);
-
-      if (isFirstJoin) {
-        console.log("is first join")
-        callAllPeers(users);
-        setIsFirstJoin(false);
-      }
-
-      setPeers(
-        users.map((val: any) => ({
-          id: val.id,
-          peerId: val.peerId,
-          stream: null,
-          isStreaming: false,
-        }))
-      );
-    },
-    [isFirstJoin]
-  );
+  const { callAllPeers, handleRoomUserUpdate } = useHandleRoomUsers(peerJS);
 
   // get socket id when we connect
   useEffect(() => {
-    // console.log("render", userInfo);
-
-    // already connected do nothing
-    if (isConnected) {
-      return;
-    }
-
     SocketService.ws.on("connect", () => {
-      setIsConnected(true);
+
+    });
+
+    SocketService.ws.on("my-id", (id: string) => {
       setUserInfo({
-        id: SocketService.ws.io.engine.id,
+        id,
       });
     });
 
     // add listern for room users
-    SocketService.ws.on("list-room-users", handleRoomUserUpdate);
+    SocketService.ws.on("list-room-users", (users: any) => {
+      handleRoomUserUpdate(users);    
+    });
 
-  }, [handleRoomUserUpdate, isConnected]);
+    return () => {
+      SocketService.ws.off("list-room-users")
+    };
+
+  }, [handleRoomUserUpdate]);
 
   // when we have a peer id join the room
   useEffect(() => {
@@ -110,10 +66,17 @@ export const Meeting = () => {
       // @ts-ignore TODO: fix ts error
       const stream = await navigator.mediaDevices.getDisplayMedia();
 
+      // go live see screen
       setPeerStream({
         peerId: userInfo.peerId,
         stream: stream,
       });
+
+      // TODO: set local users stream in recoil
+      
+
+      callAllPeers(peers);
+
     } catch (err) {}
   };
 

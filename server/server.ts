@@ -51,17 +51,18 @@ const getRoomList = (roomId: string) => {
 }
 
 io.on("connection", (socket: any) => {
-
+  // send id
+  socket.emit("my-id", socket.id);
   socket.on("join-room", async ({ roomId, peerId }) => {
     console.log("join roomid", roomId);
 
     // join room
-    await socket.join(roomId);
+    socket.join(roomId);
 
     // tell all users about members
     // @ts-ignore
 
-    console.log("user joining", roomId, peerId)
+    // console.log("user joining", roomId, peerId)
 
     // set the room id
     socket.roomId = roomId;
