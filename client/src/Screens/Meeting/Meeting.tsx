@@ -11,7 +11,6 @@ import {
   userSettingsAtom,
 } from "../../state";
 import SocketService from "../../services/socket";
-import { useState } from "react";
 import { useHandleRoomUsers } from "../../hooks/useHandleRoomUsers";
 
 export const Meeting = () => {
@@ -60,6 +59,10 @@ export const Meeting = () => {
     });
   }, [userInfo.peerId]);
 
+  // call all users
+  useEffect(() => {
+    callAllPeers(peers);
+  }, [userInfo.stream]);
 
   const handleGoLive = async () => {
     try {
@@ -72,10 +75,12 @@ export const Meeting = () => {
         stream: stream,
       });
 
-      // TODO: set local users stream in recoil
-      
+      // set it in the local users state
+      setUserInfo({
+        stream: stream,
+        isStreaming: true,
+      });
 
-      callAllPeers(peers);
 
     } catch (err) {}
   };

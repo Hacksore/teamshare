@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { useRecoilValue, useSetRecoilState } from "recoil";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { userSettingsAtom, peersAtom, peerStreamSetSelector } from "../state";
+import _, { add } from "lodash";
 
 export const useHandleRoomUsers = (peerJS: any) => {
   const [isFirstJoin, setIsFirstJoin] = useState(true);
   const userInfo = useRecoilValue(userSettingsAtom);
-  const setPeers = useSetRecoilState(peersAtom);
+  const [peers, setPeers] = useRecoilState(peersAtom);
   const setPeerStream = useSetRecoilState(peerStreamSetSelector);
 
   useEffect(() => {
@@ -13,52 +14,57 @@ export const useHandleRoomUsers = (peerJS: any) => {
       return;
     }
 
-    peerJS.on('call', (call: any) => { 
-      console.log("you are getting called", call);
-      // get our local stream
-      console.log(userInfo);
+    peerJS.on("call", (call: any) => {
       call.answer(userInfo.stream);
-    });
-
-  }, [peerJS, userInfo.stream]);
-
-  const callAllPeers = useCallback((users: any) => {
-  
-    for (const user of users) {
-      if (user.peerId === userInfo.peerId) {
-        continue; // don't call yourself
-      }
-  
-      console.log("Calling peeer", user.peerId);
-      const call = peerJS.call(user.peerId, new MediaStream());
-      call.on('stream', (remoteStream: any) => {
-        // Show stream in some video/canvas element.
-        console.log("got a remote stream", remoteStream);
+      
+      call.on("stream", function (remoteStream: any) {
+        console.log("log a remote stream from a call awnser", call, remoteStream);
         setPeerStream({
-          peerId: user.peerId,
+          peerId: call.peer,
           stream: remoteStream,
         });
       });
+    });
+  }, [peerJS, userInfo.stream]);
 
-    };
-  }, [peerJS, userInfo.peerId]);
-  
-  const handleRoomUserUpdate = useCallback((users: any) => {
+  const callAllPeers = useCallback(
+    (users: any) => {
+      for (const user of users) {
+        if (user.peerId === userInfo.peerId) {
+          continue; // don't call yourself
+        }
 
-    if (isFirstJoin) {
-      callAllPeers(users);
-      setIsFirstJoin(false);
-    }
+        const call = peerJS.call(user.peerId, userInfo.stream);
+        call.on("stream", (remoteStream: any) => {    
+          // console.log("got a remote stream", call, remoteStream);
+          // setPeerStream({
+          //   peerId: user.peerId,
+          //   stream: remoteStream,
+          // });
+        });
+      }
+    },
+    [peerJS, userInfo]
+  );
 
-    setPeers(
-      users.map((val: any) => ({
+  const handleRoomUserUpdate = useCallback(
+    (users: any) => {
+      if (isFirstJoin) {
+        // callAllPeers(users);
+        setIsFirstJoin(false);
+      }
+
+      const userObject = users.map((val: any) => ({
         id: val.id,
         peerId: val.peerId,
         stream: null,
         isStreaming: false,
-      }))
-    );
-  }, [callAllPeers, isFirstJoin]);
+      }));
 
-  return { handleRoomUserUpdate, callAllPeers }
-}
+      setPeers(userObject);
+    },
+    [peers, callAllPeers, isFirstJoin]
+  );
+
+  return { handleRoomUserUpdate, callAllPeers };
+};

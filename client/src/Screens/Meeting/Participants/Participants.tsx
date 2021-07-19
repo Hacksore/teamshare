@@ -1,46 +1,76 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState, memo } from "react";
 import { IconButton, makeStyles } from "@material-ui/core";
 import clsx from "clsx";
 import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@material-ui/icons/KeyboardArrowUp";
 import { lighten } from "@material-ui/core";
 import { useRecoilValue } from "recoil";
-import { peersAtom } from  "../../../state";
+import { peersAtom } from "../../../state";
 
-const OpenParticipant = ({ participant, onClick }: { participant: any, onClick: any }) => {
-  const color = Math.floor(Math.random()*16777215).toString(16);
-  const videoRef = useRef<any>(null);
-  
-  useEffect(() => {
-    videoRef.current.srcObject = participant.stream
-  }, [participant.stream]);
-  
+const OpenParticipant = memo(
+  ({ participant, setStream }: { participant: any; setStream: any }) => {
+    const [color, setColor] = useState("");
+    const videoRef = useRef<any>(null);
+
+    useEffect(() => {
+      const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+      setColor(randomColor);
+    }, [])
+
+
+    useEffect(() => {
+      if (!videoRef.current) {
+        return;
+      }
+      
+      // @ts-ignore
+      if (!(participant.stream instanceof MediaStream)) {
+        return;
+      }
+
+      videoRef.current.srcObject = participant.stream;
+    }, [participant.stream]);
+
+    return (
+      <div
+        onClick={() => setStream(participant.stream)}
+        style={{
+          width: 250,
+          height: 150,
+          background: `#${color}`,
+          margin: "0 4px 0 4px",
+          padding: "8p 8px 8px 8px",
+          fontWeight: "bold",
+          display: "flex",
+          position: "relative",
+        }}
+      >
+        <span
+          style={{ zIndex: 1999, position: "absolute", top: 10, left: 10, color: "#fff" }}
+        >
+          {participant.peerId}
+        </span>
+        <span
+          style={{
+            zIndex: 1999,
+            position: "absolute",
+            bottom: 10,
+            left: 10,
+            color: "#fff",
+          }}
+        >
+          {participant.id}
+        </span>
+        <video ref={videoRef} autoPlay style={{ width: "100%", height: "auto" }} />
+      </div>
+    );
+  }
+);
+
+const ClosedParticipant = memo(({ participant, setStream }: { participant: any; setStream: any }) => {
   return (
     <div
-      onClick={onClick}
-      style={{
-        width: 250,
-        height: 150,
-        background: `#${color}`,
-        margin: "0 4px 0 4px",
-        padding: "8p 8px 8px 8px",
-        fontWeight: "bold",
-        display: "flex",
-        position: "relative",
-      }}
-    >
-      <span style={{ zIndex: 1999, position: "absolute", top: 10, left: 10, color: "#fff"}}>{participant.peerId}</span>
-      <span style={{ zIndex: 1999, position: "absolute", bottom: 10, left: 10, color: "#fff"}}>{participant.id}</span>
-      <video ref={videoRef} autoPlay style={{ width: "100%", height: "auto", }} />
-    </div>
-  );
-};
-
-const ClosedParticipant = ({ id, onClick }: { id: string, onClick: any }) => {
-
-  return (
-    <div
-      onClick={onClick}
+      onClick={() => setStream(participant.stream)}
       style={{
         height: 48,
         width: 48,
@@ -53,20 +83,20 @@ const ClosedParticipant = ({ id, onClick }: { id: string, onClick: any }) => {
         fontSize: 30,
       }}
     >
-      {id.substring(0, 1)}
+      {participant.id.substring(0, 1)}
     </div>
   );
-};
+});
 
-export const Participants = (props: any) => {
+export const Participants = memo((props: any) => {
   const classes = useStyles();
   const [open, setOpen] = useState(true);
   const peers = useRecoilValue(peersAtom);
 
-  const handleStageView = (stream: any) => {    
+  const handleStageView = useCallback((stream: any) => {
     props.mainStageRef.current.srcObject = stream;
-  }
-  
+  }, []);
+
   return (
     <div
       className={clsx(classes.drawer, {
@@ -80,16 +110,17 @@ export const Participants = (props: any) => {
         </IconButton>
       </div>
 
-      {Object.values(peers).map((p: any, index: number) =>
-        open ? (
-          <OpenParticipant key={index} participant={p} onClick={() => handleStageView(p.stream)} />
-        ) : (
-          <ClosedParticipant key={index} id={p.id} onClick={() => handleStageView(p.stream)} />
-        )
-      )}
+      {peers &&
+        Object.values(peers).map((p: any, index: number) =>
+          open ? (
+            <OpenParticipant key={p.id} participant={p} setStream={handleStageView} />
+          ) : (
+            <ClosedParticipant key={p.id} participant={p} setStream={handleStageView} />
+          )
+        )}
     </div>
   );
-}
+});
 
 const useStyles = makeStyles((theme) => ({
   drawer: {

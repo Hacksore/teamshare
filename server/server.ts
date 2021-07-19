@@ -37,11 +37,19 @@ peerServer.on("disconnect", () => {});
 
 const getRoomList = (roomId: string) => {
   // @ts-ignore
-  const currentUsers = Array.from(io.sockets.adapter.rooms.get(roomId));
+  const roomIds = io.sockets.adapter.rooms.get(roomId);
+  if (!roomIds) {
+    return [];
+  }
+
+  const currentUsers = Array.from(roomIds);
+
+  if (!currentUsers) {
+    return [];
+  }
 
   return currentUsers.map(id => {
     const socket: any = io.sockets.sockets.get(id);
-    // console.log(socket)
 
     return {
       id: id,
@@ -76,18 +84,15 @@ io.on("connection", (socket: any) => {
 
   // when the user disconnects.. perform this
   socket.on("disconnect", async () => {
-    await socket.leave(socket.roomId);
+    socket.leave(socket.roomId);
 
-    const roomUsers = io.sockets.adapter.rooms.get(socket.roomId);
+    const roomUsers = getRoomList(socket.roomId);
     if (!roomUsers) {
       return;
     }
 
-    // @ts-ignore
-    const roomUsersArray = Array.from(roomUsers);
-
     // tell users about peple
-    io.to(socket.roomId).emit("list-room-users", roomUsersArray);
+    io.to(socket.roomId).emit("list-room-users", roomUsers);
   });
 
 });
