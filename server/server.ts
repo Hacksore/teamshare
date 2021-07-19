@@ -5,7 +5,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import http from "http";
 
-const PEERJS_PORT = 8000
+const EXPRESS_PORT = process.env.PORT || "8000"
 const SOCKETIO_PORT = 8001
 
 const app = express();
@@ -26,7 +26,7 @@ app.use(express.static(STATIC_ROOT));
 
 const peerServer: any = ExpressPeerServer(server, {
   allow_discovery: true,
-  port: PEERJS_PORT,
+  port: parseInt(EXPRESS_PORT),
   path: "/",
 });
 
@@ -100,4 +100,4 @@ io.on("connection", (socket: any) => {
 // handle SPA rewrite
 app.get("*", (req, res) => res.sendFile(`${STATIC_ROOT}/index.html`));
 
-server.listen(PEERJS_PORT);
+server.listen(EXPRESS_PORT);
