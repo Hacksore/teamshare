@@ -1,11 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import Peer from "peerjs";
-export const usePeerConnection = ({ setParticipantStream, getCurrentLocalVideoRef }: any) => {
-  const peer = useRef<any>(null);
+import { userInfoSelector } from "../state";
+import { useSetRecoilState } from "recoil";
 
+// this is prolly ok for a hook now but we need to use this in the meeting
+export const usePeerConnection = () => {
+  const [peer, setPeer] = useState<any>(null);
+  const setUserInfo = useSetRecoilState(userInfoSelector);
+  
   useEffect(() => {
-    // might need to store in ref to use elsewhere
-    peer.current = new Peer({
+
+    const peer = new Peer({
       // debug: 4,
       host: window.location.hostname,
       port: parseInt(window.location.port),
@@ -15,18 +20,26 @@ export const usePeerConnection = ({ setParticipantStream, getCurrentLocalVideoRe
       },
     });
 
-    peer.current.on("open", async (id: any) => {
-      console.log(id)
+    peer.on("open", async (id: any) => {
+      setUserInfo({ peerId: id });
     });
 
     // anwser calls
-    peer.current.on("call", async (call: any) => {
+    peer.on("call", async (call: any) => {
       
     });
 
     // on data connection from remote user
-    peer.current.on("connection", (conn: any) => {
+    peer.on("connection", (conn: any) => {
       
     });
+
+    setPeer(peer);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // console.log("peer", peer);
+  
+  return peer
 };

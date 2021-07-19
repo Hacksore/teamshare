@@ -3,70 +3,125 @@ import { makeStyles } from "@material-ui/styles";
 import Controls from "./Controls";
 import Participants from "./Participants";
 import { usePeerConnection } from "../../hooks/usePeerConnection";
-import { useRecoilState } from "recoil";
-import { peersAtom, userSettingsAtom } from "../../state";
-import { useSocketConnection } from "../../hooks/useSocketConnection";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import {
+  peersAtom,
+  peerStreamSetSelector,
+  userInfoSelector,
+  userSettingsAtom,
+} from "../../state";
+import SocketService from "../../services/socket";
+import { useState } from "react";
+import { useCallback } from "react";
 
 export const Meeting = () => {
   const mainVideoRef = useRef<any>(null);
   const classes = useStyles();
-  const [userSettings, setUserSettings] = useRecoilState(userSettingsAtom);
-  const [peers, setPeers] = useRecoilState<any>(peersAtom);
-  const peerRef = useRef<any>(peers);
+  const setUserInfo = useSetRecoilState(userInfoSelector);
+  const setPeerStream = useSetRecoilState(peerStreamSetSelector);
+  const userInfo = useRecoilValue(userSettingsAtom);
+  const [peers, setPeers] = useRecoilState(peersAtom);
+  const [isFirstJoin, setIsFirstJoin] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
-  const setParticipantStream = ({ id, stream }: any) => {
-    setPeers({
-      ...peerRef.current,
-      [id]: { id, stream },
-    });
-  };
+  // maybe move this too;
+  const peerJS = usePeerConnection();
 
-  const getCurrentLocalVideoRef = () => {
-    // @ts-ignore
-    return peerRef.current[userSettings.id].stream;
-  };
+  const callAllPeers = useCallback((users: any) => {
+    // console.log("downastream", peerJS);
 
+    for (const user of users) {
+      // console.log("calling peer", user.peerId);
+      if (user.peerId === userInfo.peerId) {
+        continue; // don't call yourself
+      }
+
+      // console.log(peerJS)
+      // const call = peerJS.call(user.peerId, new MediaStream());
+      // call.on('stream', (remoteStream: any) => {
+      //   // Show stream in some video/canvas element.
+      //   setPeerStream({
+      //     peerId: user.peerId,
+      //     stream: remoteStream,
+      //   });
+
+      // });
+    }
+  }, [peerJS, userInfo]);
+
+  const handleRoomUserUpdate = useCallback(
+    (users: any) => {
+      console.log("users",users);
+
+      if (isFirstJoin) {
+        console.log("is first join")
+        callAllPeers(users);
+        setIsFirstJoin(false);
+      }
+
+      setPeers(
+        users.map((val: any) => ({
+          id: val.id,
+          peerId: val.peerId,
+          stream: null,
+          isStreaming: false,
+        }))
+      );
+    },
+    [isFirstJoin]
+  );
+
+  // get socket id when we connect
   useEffect(() => {
-    peerRef.current = peers;
-  }, [peers]);
+    // console.log("render", userInfo);
 
-  // everything will be in global state?
-  usePeerConnection({ setParticipantStream, getCurrentLocalVideoRef });
+    // already connected do nothing
+    if (isConnected) {
+      return;
+    }
 
-  useSocketConnection()
+    SocketService.ws.on("connect", () => {
+      setIsConnected(true);
+      setUserInfo({
+        id: SocketService.ws.io.engine.id,
+      });
+    });
+
+    // add listern for room users
+    SocketService.ws.on("list-room-users", handleRoomUserUpdate);
+
+  }, [handleRoomUserUpdate, isConnected]);
+
+  // when we have a peer id join the room
+  useEffect(() => {
+    if (!userInfo.peerId) {
+      return;
+    }
+
+    SocketService.ws.emit("join-room", {
+      roomId: "test",
+      peerId: userInfo.peerId,
+    });
+  }, [userInfo.peerId]);
+
 
   const handleGoLive = async () => {
     try {
       // @ts-ignore TODO: fix ts error
       const stream = await navigator.mediaDevices.getDisplayMedia();
 
-      // updated peers with my stream
-      const updatedPeers = JSON.parse(JSON.stringify(peers));
-      if (userSettings.id) {
-        updatedPeers[userSettings.id].stream = stream;
-        setPeers(updatedPeers);
-      }
-
-      setUserSettings({
-        ...userSettings,
-        isStreaming: true,
+      setPeerStream({
+        peerId: userInfo.peerId,
         stream: stream,
       });
-    } catch (err) {
-      console.log(err);
-      setUserSettings({
-        ...userSettings,
-        isStreaming: false,
-        stream: undefined,
-      });
-    }
+    } catch (err) {}
   };
 
   return (
     <div>
       <div className={classes.root}>
         <div className={classes.videoRoot}>
-          <video ref={mainVideoRef} autoPlay className={classes.video}/>
+          <video ref={mainVideoRef} autoPlay className={classes.video} />
           <div className={classes.videoControls}>
             <Controls
               ref={mainVideoRef}
@@ -113,5 +168,5 @@ const useStyles = makeStyles((theme) => ({
     bottom: 0,
     left: 0,
     position: "absolute",
-  },  
+  },
 }));

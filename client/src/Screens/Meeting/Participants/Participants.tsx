@@ -5,14 +5,15 @@ import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@material-ui/icons/KeyboardArrowUp";
 import { lighten } from "@material-ui/core";
 import { useRecoilValue } from "recoil";
-import { peersAtom, userSettingsAtom } from  "../../../state";
+import { peersAtom } from  "../../../state";
 
-const OpenParticipant = ({ id, stream, onClick }: { id: string, stream: any, onClick: any }) => {
+const OpenParticipant = ({ participant, onClick }: { participant: any, onClick: any }) => {
+  const color = Math.floor(Math.random()*16777215).toString(16);
   const videoRef = useRef<any>(null);
   
   useEffect(() => {
-    videoRef.current.srcObject = stream
-  }, [stream]);
+    videoRef.current.srcObject = participant.stream
+  }, [participant.stream]);
   
   return (
     <div
@@ -20,22 +21,23 @@ const OpenParticipant = ({ id, stream, onClick }: { id: string, stream: any, onC
       style={{
         width: 250,
         height: 150,
-        background: "#000",
+        background: `#${color}`,
         margin: "0 4px 0 4px",
-        padding: "0 8px 8px 8px",
+        padding: "8p 8px 8px 8px",
         fontWeight: "bold",
         display: "flex",
         position: "relative",
-        // alignItems: "flex-end",
       }}
     >
-      <span style={{ zIndex: 1999, position: "absolute", top: 0, left: 0, color: "#fff"}}>{id}</span>
-      <video ref={videoRef} autoPlay style={{ background: "#c1c1c1", width: "100%", height: "auto", }} />
+      <span style={{ zIndex: 1999, position: "absolute", top: 10, left: 10, color: "#fff"}}>{participant.peerId}</span>
+      <span style={{ zIndex: 1999, position: "absolute", bottom: 10, left: 10, color: "#fff"}}>{participant.id}</span>
+      <video ref={videoRef} autoPlay style={{ width: "100%", height: "auto", }} />
     </div>
   );
 };
 
 const ClosedParticipant = ({ id, onClick }: { id: string, onClick: any }) => {
+
   return (
     <div
       onClick={onClick}
@@ -60,7 +62,6 @@ export const Participants = (props: any) => {
   const classes = useStyles();
   const [open, setOpen] = useState(true);
   const peers = useRecoilValue(peersAtom);
-  const userSettings = useRecoilValue(userSettingsAtom);
 
   const handleStageView = (stream: any) => {    
     props.mainStageRef.current.srcObject = stream;
@@ -81,7 +82,7 @@ export const Participants = (props: any) => {
 
       {Object.values(peers).map((p: any, index: number) =>
         open ? (
-          <OpenParticipant key={index} id={p.id} stream={p.stream} onClick={() => handleStageView(p.stream)} />
+          <OpenParticipant key={index} participant={p} onClick={() => handleStageView(p.stream)} />
         ) : (
           <ClosedParticipant key={index} id={p.id} onClick={() => handleStageView(p.stream)} />
         )

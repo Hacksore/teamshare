@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Button, makeStyles, IconButton } from "@material-ui/core";
+import { makeStyles, IconButton } from "@material-ui/core";
 
 import RecordIcon from "@material-ui/icons/LiveTv";
 import ExpandIcon from "@material-ui/icons/Fullscreen";

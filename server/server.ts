@@ -1,7 +1,7 @@
 import path from "path";
 import express from "express";
 import { ExpressPeerServer } from "@hacksore/peer";
-import { Server } from "socket.io";
+import { Socket, Server } from "socket.io";
 import cors from "cors";
 import http from "http";
 
@@ -32,16 +32,27 @@ const peerServer: any = ExpressPeerServer(server, {
 
 app.use("/peerjs", peerServer);
 
-peerServer.on("connection", (client) => {
-});
+peerServer.on("connection", () => {});
+peerServer.on("disconnect", () => {});
 
-peerServer.on("disconnect", (client) => {
-});
+const getRoomList = (roomId: string) => {
+  // @ts-ignore
+  const currentUsers = Array.from(io.sockets.adapter.rooms.get(roomId));
+
+  return currentUsers.map(id => {
+    const socket: any = io.sockets.sockets.get(id);
+    // console.log(socket)
+
+    return {
+      id: id,
+      peerId: socket.peerId
+    }
+  });
+}
 
 io.on("connection", (socket: any) => {
-  const { id: socketId } = socket;
 
-  socket.on("join-room", async (roomId) => {
+  socket.on("join-room", async ({ roomId, peerId }) => {
     console.log("join roomid", roomId);
 
     // join room
@@ -49,13 +60,17 @@ io.on("connection", (socket: any) => {
 
     // tell all users about members
     // @ts-ignore
-    const roomUsers = Array.from(io.sockets.adapter.rooms.get(roomId));
-    io.to(roomId).emit("list-room-users", roomUsers);
 
-    socket.emit("my-id", socketId);
+    console.log("user joining", roomId, peerId)
 
     // set the room id
     socket.roomId = roomId;
+
+    // set the peer id
+    socket.peerId = peerId;
+
+    io.to(roomId).emit("list-room-users", getRoomList(roomId));
+
   });
 
   // when the user disconnects.. perform this
